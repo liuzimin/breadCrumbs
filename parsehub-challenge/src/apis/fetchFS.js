@@ -42,24 +42,28 @@ export const getContents = async function(path) {
         if (key !== "") {
           resultFS = resultFS.children[key];
         }
+        if (resultFS === undefined) {
+          resolve({ error: "Path does not Exist" });
+        }
       });
 
-      let result = {
-        type: resultFS.type,
-        name: dirNames[dirNames.length - 1]
-      };
+      if (resultFS !== undefined) {
+        let result = {
+          type: resultFS.type,
+          name: dirNames[dirNames.length - 1]
+        };
 
-      if (resultFS.type === "dir") {
-        result["children"] = {};
-        for (let [key, value] of Object.entries(resultFS.children)) {
-          result["children"][key] = {
-            type: value.type,
-            name: key
-          };
+        if (resultFS.type === "dir") {
+          result["children"] = {};
+          for (let [key, value] of Object.entries(resultFS.children)) {
+            result["children"][key] = {
+              type: value.type,
+              name: key
+            };
+          }
         }
+        resolve(result);
       }
-
-      resolve(result);
     }, 500);
   });
 };

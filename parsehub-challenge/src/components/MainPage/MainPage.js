@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Typography, Grid } from "@material-ui/core";
 import Breadcrumbs from "@material-ui/core/Breadcrumbs";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Link from "@material-ui/core/Link";
-import Button from "@material-ui/core/Button";
 import { getContents } from "../../apis/fetchFS";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import DescriptionIcon from "@material-ui/icons/Description";
+import FolderIcon from "@material-ui/icons/Folder";
 
 const useStyles = makeStyles(theme => ({
   content: {
@@ -23,11 +23,6 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-function handleClick(event) {
-  event.preventDefault();
-  console.info("You clicked a breadcrumb.");
-}
-
 function MainPage(props) {
   let history = useHistory();
   const classes = useStyles();
@@ -41,6 +36,8 @@ function MainPage(props) {
     loading: false
   });
 
+  const [mounted, setMounted] = useState(false);
+
   function fetchingContents() {
     setContents({
       ...contents,
@@ -53,40 +50,104 @@ function MainPage(props) {
       loading: false
     });
   }
+  function componentIsMounted() {
+    setMounted(true);
+  }
 
   function generateBreadcrumbs() {
     let dirNames = history.location.pathname.split("/");
     let linksJSX = [];
+    let pathList = [];
     dirNames.forEach(function(key, i) {
-      if (i !== 0 && i !== dirNames.length - 1) {
+      if (i === 0) {
         linksJSX.push(
           <Link
             color="inherit"
-            onClick={handleClick}
+            onClick={function() {
+              history.push("/");
+              loadContents();
+            }}
+            className={classes.breadcrumbs}
+          >
+            root
+          </Link>
+        );
+      } else if (i === dirNames.length - 1) {
+        linksJSX.push(<Typography color="textPrimary">{key}</Typography>);
+      } else if (i !== 0 && i !== dirNames.length - 1) {
+        pathList.push(key);
+        linksJSX.push(
+          <Link
+            color="inherit"
+            onClick={function() {
+              history.push("/" + pathList.join("/"));
+              loadContents();
+            }}
             className={classes.breadcrumbs}
           >
             {key}
           </Link>
         );
-      } else if (i === dirNames.length - 1) {
-        linksJSX.push(<Typography color="textPrimary">{key}</Typography>);
       }
     });
     return linksJSX;
   }
 
-  function generateIcons() {
-    let iconItemsJSX = [];
-    for (let [key, value] of Object.entries(contents.data.children)) {
-      iconItemsJSX.push(
-        <Grid item key={[key]} className={classes.content}>
-          <DescriptionIcon fontSize="large" />
-          <Typography>{value.name}</Typography>
+  function displayContent() {
+    if (contents.data.type === "dir") {
+      let iconItemsJSX = [];
+      for (let [key, value] of Object.entries(contents.data.children)) {
+        iconItemsJSX.push(
+          <Grid
+            item
+            key={[key]}
+            className={classes.content}
+            onClick={function() {
+              if (history.location.pathname === "/") {
+                history.push("/" + key);
+              } else {
+                history.push(history.location.pathname + "/" + key);
+              }
+              loadContents();
+            }}
+          >
+            {value.type === "file" ? (
+              <DescriptionIcon fontSize="large" />
+            ) : (
+              <FolderIcon fontSize="large" />
+            )}
+            <Typography>{value.name}</Typography>
+          </Grid>
+        );
+      }
+      return iconItemsJSX;
+    } else if (contents.data.type === "file") {
+      return (
+        <Grid item>
+          <Typography>THIS IS FILE: {contents.data.name}</Typography>
         </Grid>
       );
+    } else {
+      return <></>;
     }
-    return iconItemsJSX;
   }
+
+  async function loadContents() {
+    fetchingContents();
+    let contents = await getContents(history.location.pathname);
+    if (contents.error === "Path does not Exist") {
+      history.push("/ErrorScreen");
+    }
+    fetchedContents(contents);
+  }
+
+  useEffect(function() {
+    if (mounted === false) {
+      componentIsMounted();
+      loadContents();
+    }
+  });
+
   return (
     <Grid
       container
@@ -94,25 +155,16 @@ function MainPage(props) {
       justify="center"
       alignItems="center"
       spacing={10}
+      style={{
+        margin: 0,
+        width: "100%"
+      }}
     >
       {/* Breadcrumb nav */}
       <Grid item>
         <Breadcrumbs aria-label="breadcrumb">
           {generateBreadcrumbs()}
         </Breadcrumbs>
-      </Grid>
-
-      <Grid item>
-        <Button
-          onClick={async function() {
-            console.log("path", history.location.pathname);
-            fetchingContents();
-            let contents = await getContents(history.location.pathname);
-            fetchedContents(contents);
-          }}
-        >
-          Api
-        </Button>
       </Grid>
 
       {/* Content Display */}
@@ -127,7 +179,7 @@ function MainPage(props) {
             alignItems="center"
             spacing={10}
           >
-            {generateIcons()}
+            {displayContent()}
           </Grid>
         )}
       </Grid>
