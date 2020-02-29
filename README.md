@@ -1,2 +1,2 @@
 # parseHubChallenge
-A sample file broswer for PArsehub coding challenge. 
+A sample ReactJS file broswer made with MaterialUI.
