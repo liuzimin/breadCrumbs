@@ -62,6 +62,7 @@ function MainPage(props) {
       if (i === 0) {
         linksJSX.push(
           <Link
+            key={key + i}
             color="inherit"
             onClick={function() {
               history.push("/");
@@ -73,14 +74,20 @@ function MainPage(props) {
           </Link>
         );
       } else if (i === dirNames.length - 1) {
-        linksJSX.push(<Typography color="textPrimary">{key}</Typography>);
-      } else if (i !== 0 && i !== dirNames.length - 1) {
+        linksJSX.push(
+          <Typography key={key + i} color="textPrimary">
+            {key}
+          </Typography>
+        );
+      } else if (i !== 0 && i !== dirNames.length - 1 && key !== '') {
         pathList.push(key);
+        let path = "/" + pathList.join("/");
         linksJSX.push(
           <Link
+            key={key + i}
             color="inherit"
             onClick={function() {
-              history.push("/" + pathList.join("/"));
+              history.push(path);
               loadContents();
             }}
             className={classes.breadcrumbs}
@@ -133,6 +140,7 @@ function MainPage(props) {
   }
 
   async function loadContents() {
+    console.log("load");
     fetchingContents();
     let contents = await getContents(history.location.pathname);
     if (contents.error === "Path does not Exist") {
@@ -144,6 +152,9 @@ function MainPage(props) {
   useEffect(function() {
     if (mounted === false) {
       componentIsMounted();
+      window.onpopstate = e => {
+        loadContents();
+      };
       loadContents();
     }
   });
